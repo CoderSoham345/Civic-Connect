@@ -176,3 +176,52 @@ html.theme-transition *::after {
     image-rendering: pixelated !important;
   }
 }
+
+/* =========================================
+   Accessibility Controls - Issue #93
+   ========================================= */
+
+/* Font-size scaling */
+html {
+  font-size: var(--accessibility-font-size, 16px);
+}
+
+/* High-contrast accessibility mode */
+html.high-contrast {
+  color-scheme: light;
+}
+
+html.high-contrast body {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+html.high-contrast :is(
+  main, section, article, aside, nav, header, footer,
+  .bg-white, .bg-gray-50, .bg-gray-100
+) {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+html.high-contrast :is(
+  p, span, h1, h2, h3, h4, h5, h6, label
+) {
+  color: #000000 !important;
+}
+
+html.high-contrast :is(button, a) {
+  text-decoration-thickness: 2px;
+}
+
+html.high-contrast :focus-visible {
+  outline: 3px solid #005fcc !important;
+  outline-offset: 3px;
+}
+
+/* Keep accessibility settings from affecting printed receipts */
+@media print {
+  html {
+    font-size: 16px !important;
+  }
+}
