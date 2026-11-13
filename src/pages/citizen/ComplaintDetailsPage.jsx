@@ -270,7 +270,14 @@ export function ComplaintDetailsPage() {
 
   const lastUpdated = complaint.updatedAt?.toDate?.() || complaint.createdAt?.toDate?.()
   const slaTarget = getSlaTargetDate(complaint.createdAt, complaint.category, complaint.department)
-  const canReopen = canReopenComplaint(complaint)
+  const isOwner = Boolean(user?.uid && complaint?.reportedBy === user?.uid)
+  const isMergedViewer = Boolean(
+    user?.uid &&
+    !isOwner &&
+    Array.isArray(complaint?.mergedReporters) &&
+    complaint.mergedReporters.includes(user?.uid)
+  )
+  const canReopen = isOwner && canReopenComplaint(complaint)
   const initialPhoto = complaint.imageUrl || complaint.photos?.[0]
   const resolutionPhoto = getResolutionPhoto(complaint)
   const isMergedViewer =

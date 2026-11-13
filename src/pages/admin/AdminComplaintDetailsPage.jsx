@@ -25,11 +25,13 @@ import { getDisplayId, ensureComplaintId } from '@/firebase/complaintId'
 import { commitComplaintTransition } from '@/firebase/complaintLifecycle'
 import { assignComplaintDepartment } from '@/firebase/complaintDepartment'
 import { mergeComplaints } from '@/firebase/complaintMerge'
+import { loadResolutionTemplates } from '@/firebase/resolutionTemplates'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { SlaBadge, SlaCountdown } from '@/components/common/SlaBadge'
 import { DepartmentCrest, CategoryAvatar } from '@/components/common/DepartmentCrest'
+import { ResolutionTemplateSelector } from '@/components/admin/ResolutionTemplateSelector'
 import { getSlaTargetDate } from '@/utils/sla'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -45,6 +47,7 @@ import {
 } from '@/components/ui/dialog'
 import toast from 'react-hot-toast'
 import ComplaintAudioPlayer from '@/components/citizen/ComplaintAudioPlayer'
+import ResolutionProofSlider, { getResolutionPhoto } from '@/components/citizen/ResolutionProofSlider'
 import { ComplaintLocationMap } from '@/components/common/ComplaintLocationMap'
 
 const statusVariant = {
@@ -86,19 +89,15 @@ export function AdminComplaintDetailsPage() {
   const { id } = useParams()
   const navigate = useNavigate()
 
-  let authUser = null
-  try {
-    authUser = useAuth()?.user
-  } catch {
-    authUser = auth?.currentUser ? { uid: auth.currentUser.uid } : null
-  }
-
+  const { user: authUser } = useAuth()
   const actorUid = authUser?.uid || auth?.currentUser?.uid || null
   const [complaint, setComplaint] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [citizen, setCitizen] = useState(null)
   const [resolutionNotes, setResolutionNotes] = useState('')
+  const [resolutionTemplates, setResolutionTemplates] = useState([])
+  const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const isDirty = useRef(false)
   const [saving, setSaving] = useState(false)
   const transitionPending = useRef(false)
@@ -219,6 +218,18 @@ export function AdminComplaintDetailsPage() {
     }
   }, [id, backfillRetry, navigate])
 
+  useEffect(() => {
+    let active = true
+
+    loadResolutionTemplates().then((templates) => {
+      if (active) setResolutionTemplates(templates)
+    })
+
+    return () => {
+      active = false
+    }
+  }, [])
+
   const handleStatusUpdate = async () => {
     const next = nextStatus[complaint.status]
     if (!next || saving || transitionPending.current) return
@@ -338,6 +349,17 @@ export function AdminComplaintDetailsPage() {
       transitionPending.current = false
       setSaving(false)
     }
+  }
+
+  const handleTemplateSelect = (templateId) => {
+    setSelectedTemplateId(templateId)
+
+    const template = resolutionTemplates.find((item) => item.id === templateId)
+    if (!template) return
+
+    isDirty.current = true
+    setResolutionNotes(template.body)
+    toast.success(`Applied "${template.title}" template`)
   }
 
   const handleSaveNotes = async () => {
@@ -811,6 +833,14 @@ export function AdminComplaintDetailsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="mb-4">
+                <ResolutionTemplateSelector
+                  templates={resolutionTemplates}
+                  value={selectedTemplateId}
+                  onChange={handleTemplateSelect}
+                  disabled={saving}
+                />
+              </div>
               <textarea
                 value={resolutionNotes}
                 onChange={(e) => {
