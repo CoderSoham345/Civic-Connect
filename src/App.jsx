@@ -10,7 +10,7 @@ import KeyboardShortcutsModal from '@/components/common/KeyboardShortcutsModal'
 
 import OfflineBanner from '@/components/common/OfflineBanner'
 import OfflineSyncManager from '@/components/common/OfflineSyncManager'
-
+import AccessibilityBar from '@/components/common/AccessibilityBar'
 
 function App() {
   return (
@@ -22,6 +22,7 @@ function App() {
               <OfflineBanner />
               <OfflineSyncManager />
               <KeyboardShortcutsModal />
+              <AccessibilityBar />
 
               <AppRoutes />
 

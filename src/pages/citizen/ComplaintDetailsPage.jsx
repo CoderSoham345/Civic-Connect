@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowLeft, MapPin, CalendarDays, FileText, ClipboardCheck, AlertTriangle, Camera, ZoomIn, ZoomOut, ExternalLink, GitMerge, Printer } from 'lucide-react'
-import { doc, collection, onSnapshot, serverTimestamp, getDoc } from 'firebase/firestore'
-import { resolveCitizenComplaintDocumentId } from '@/firebase/complaintReferences'
+import { doc, getDoc, collection, onSnapshot, serverTimestamp, query, where, getDocs, limit } from 'firebase/firestore'
 import { db } from '@/firebase/services'
 import { getDisplayId } from '@/firebase/complaintId'
 import { commitComplaintTransition } from '@/firebase/complaintLifecycle'
@@ -40,6 +39,22 @@ const statusVariant = {
 }
 
 const REOPEN_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
+
+async function resolveCitizenComplaintDocumentId(idOrTrackingCode) {
+  if (!idOrTrackingCode) return idOrTrackingCode
+  const directSnap = await getDoc(doc(db, 'issues', idOrTrackingCode))
+  if (directSnap.exists()) return directSnap.id
+
+  const q = query(
+    collection(db, 'issues'),
+    where('complaintId', '==', idOrTrackingCode),
+    limit(1)
+  )
+  const querySnap = await getDocs(q)
+  if (!querySnap.empty) return querySnap.docs[0].id
+
+  return idOrTrackingCode
+}
 
 function canReopenComplaint(complaint) {
   const resolvedAt = complaint.resolvedAt?.toDate?.()
@@ -141,17 +156,8 @@ export function ComplaintDetailsPage() {
 
     const loadComplaint = async () => {
       try {
-        const documentId = await resolveCitizenComplaintDocumentId(
-          id,
-          user?.uid,
-        )
+        const documentId = await resolveCitizenComplaintDocumentId(id)
         if (cancelled) return
-
-        if (!documentId) {
-          setNotFound(true)
-          setLoading(false)
-          return
-        }
 
         // Replace public tracking IDs with the actual Firestore document ID.
         if (documentId !== id) {
@@ -226,27 +232,29 @@ export function ComplaintDetailsPage() {
       </div>
     )
   }
-if (loadError) {
-  return (
-    <div className="flex flex-col items-center justify-center py-20">
-      <AlertTriangle className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-        Unable to load complaint
-      </h2>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-        Please check your connection and try again.
-      </p>
-      <Button
-        variant="outline"
-        size="sm"
-        className="mt-4"
-        onClick={() => window.location.reload()}
-      >
-        Try Again
-      </Button>
-    </div>
-  )
-}
+
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <AlertTriangle className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          Unable to load complaint
+        </h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Please check your connection and try again.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-4"
+          onClick={() => window.location.reload()}
+        >
+          Try Again
+        </Button>
+      </div>
+    )
+  }
+
   if (notFound || !complaint) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -272,6 +280,10 @@ if (loadError) {
   const canReopen = isOwner && canReopenComplaint(complaint)
   const initialPhoto = complaint.imageUrl || complaint.photos?.[0]
   const resolutionPhoto = getResolutionPhoto(complaint)
+  const isMergedViewer =
+    complaint.status !== 'Merged - Duplicate' &&
+    Array.isArray(complaint.mergedFromUids) &&
+    complaint.mergedFromUids.includes(user?.uid)
 
   const timelineEvents = (events && events.length > 0)
     ? events.map((evt) => ({
