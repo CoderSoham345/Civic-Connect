@@ -271,19 +271,17 @@ export function ComplaintDetailsPage() {
   const lastUpdated = complaint.updatedAt?.toDate?.() || complaint.createdAt?.toDate?.()
   const slaTarget = getSlaTargetDate(complaint.createdAt, complaint.category, complaint.department)
   const isOwner = Boolean(user?.uid && complaint?.reportedBy === user?.uid)
+  const mergedUids = complaint?.mergedReporters || complaint?.mergedFromUids || []
   const isMergedViewer = Boolean(
     user?.uid &&
     !isOwner &&
-    Array.isArray(complaint?.mergedReporters) &&
-    complaint.mergedReporters.includes(user?.uid)
+    complaint.status !== 'Merged - Duplicate' &&
+    Array.isArray(mergedUids) &&
+    mergedUids.includes(user?.uid)
   )
   const canReopen = isOwner && canReopenComplaint(complaint)
   const initialPhoto = complaint.imageUrl || complaint.photos?.[0]
   const resolutionPhoto = getResolutionPhoto(complaint)
-  const isMergedViewer =
-    complaint.status !== 'Merged - Duplicate' &&
-    Array.isArray(complaint.mergedFromUids) &&
-    complaint.mergedFromUids.includes(user?.uid)
 
   const timelineEvents = (events && events.length > 0)
     ? events.map((evt) => ({
