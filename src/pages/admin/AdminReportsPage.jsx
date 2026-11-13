@@ -52,6 +52,32 @@ const allCategories = [
 
 const allDepartments = ['Roads', 'Sanitation', 'Electricity', 'Water', 'Public Safety']
 
+const csvHeaders = [
+  'Complaint ID',
+  'Date',
+  'Title',
+  'Category',
+  'Department',
+  'Status',
+  'Address',
+  'Assigned Worker Name',
+  'Assigned Worker Phone',
+]
+
+function toCsvRow(c) {
+  return [
+    getDisplayId(c),
+    c.createdAt?.toDate ? formatDateStamp(c.createdAt.toDate()) : '',
+    c.title,
+    c.category,
+    c.department,
+    c.status,
+    c.address,
+    c.assignedWorker?.name,
+    c.assignedWorker?.phone,
+  ]
+}
+
 
 function HighlightMatch({ text, query }) {
   if (!text) return null

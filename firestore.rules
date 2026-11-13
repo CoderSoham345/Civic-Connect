@@ -162,6 +162,15 @@ service cloud.firestore {
       }
     }
 
+    // Platform-wide configuration. Canned resolution templates are readable
+    // by any signed-in user (officers load them in the complaint workflow);
+    // only administrators may change settings.
+    match /settings/{settingId} {
+      allow read: if isAdmin() ||
+                    (isAuthenticated() && settingId == 'resolutionTemplates');
+      allow write: if isAdmin();
+    }
+
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() &&
                   (resource.data.recipientUid == request.auth.uid ||
