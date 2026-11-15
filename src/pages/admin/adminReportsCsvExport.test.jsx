@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => {
   return {
     subscribeToReportsPage: vi.fn(),
     fetchAllReportsForExport: vi.fn(),
+    fetchAllReportsForSearch: vi.fn(),
     toCsv: vi.fn(() => 'csv-content'),
     downloadCsv: vi.fn(),
     formatDateStamp: vi.fn(() => '2026-11-13'),
@@ -35,7 +36,12 @@ vi.mock('@/firebase/adminReportsQuery', () => ({
   REPORTS_PAGE_SIZE: 15,
   subscribeToReportsPage: mocks.subscribeToReportsPage,
   fetchAllReportsForExport: mocks.fetchAllReportsForExport,
+ fix/ci-main-regressions
   fetchAllReportsForSearch: vi.fn(async (...args) => (await mocks.fetchAllReportsForExport(...args))?.docs || []),
+
+  fetchAllReportsForSearch: mocks.fetchAllReportsForSearch,
+  REPORTS_PAGE_SIZE: 10,
+ main
 }))
 vi.mock('@/utils/csv', () => ({
   toCsv: mocks.toCsv,
@@ -135,6 +141,7 @@ describe('AdminReportsPage - CSV export', () => {
       docs: EXPORT_DOCS,
       truncated: false,
     })
+    mocks.fetchAllReportsForSearch.mockResolvedValue(PAGE_DOCS)
     mocks.getDoc.mockResolvedValue({
       exists: () => false,
       data: () => ({}),
@@ -181,7 +188,12 @@ describe('AdminReportsPage - CSV export', () => {
     const [headers, rows] = mocks.toCsv.mock.calls[0]
 
     expect(headers).toContain('Tracking ID')
+ fix/ci-main-regressions
     expect(headers).toContain('Status')
+
+    expect(headers).toContain('Category')
+    expect(headers).toContain('Department')
+ main
     expect(rows).toHaveLength(3)
     expect(rows[0][0]).toBe('CMP-2026-0001')
     expect(mocks.downloadCsv).toHaveBeenCalledWith(
